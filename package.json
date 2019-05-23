@@ -1,0 +1,61 @@
+{
+  "//1": "describes your app and its dependencies",
+  "//2": "https://docs.npmjs.com/files/package.json",
+  "//3": "updating this file will download and update your packages",
+  "name": "my-glitch-app",
+  "version": "0.0.1",
+  "description": "What am I about?",
+  "main": "server.js",
+  "scripts": {
+    "start": "bash ./scripts/start.sh",
+    "build": "webpack"
+  },
+  "dependencies": {
+    "awesome-typescript-loader": "^5.2.1",
+    "classnames": "^2.2.6",
+    "express": "^4.15.2",
+    "mobx": "^5.9.0",
+    "mobx-react": "^5.4.3",
+    "react": "^16.8.0",
+    "react-dom": "^16.8.0",
+    "react-measure": "^2.2.3",
+    "resize-observer-polyfill": "1.5.1"
+  },
+  "devDependencies": {
+    "@babel/core": "7",
+    "@storybook/addon-actions": "^5.0.11",
+    "@storybook/addon-knobs": "^5.0.11",
+    "@storybook/react": "^5.0.11",
+    "@types/classnames": "^2.2.7",
+    "@types/jest": "^24.0.11",
+    "@types/node": "^10.12.18",
+    "@types/react": "^16.7.20",
+    "@types/react-dom": "^16.0.11",
+    "@types/react-measure": "^2.0.4",
+    "@types/react-test-renderer": "^16.8.1",
+    "@types/storybook__addon-actions": "^3.4.2",
+    "@types/storybook__addon-knobs": "^5.0.0",
+    "@types/storybook__react": "^4.0.1",
+    "@wasm-tool/wasm-pack-plugin": "0.3.0",
+    "babel-loader": "7",
+    "css-loader": "^2.1.1",
+    "extract-text-webpack-plugin": "^3.0.2",
+    "html-webpack-plugin": "^3.0.2",
+    "react-test-renderer": "^16.8.6",
+    "style-loader": "^0.23.1",
+    "ts-loader": "^6.0.1",
+    "typescript": "^3.2.4",
+    "webpack": "^4.31.0",
+    "webpack-cli": "*",
+    "webpack-dev-server": "^3.3.1"
+  },
+  "repository": {
+    "url": "https://glitch.com/#!/project/welcome-project"
+  },
+  "license": "MIT",
+  "keywords": [
+    "node",
+    "glitch",
+    "express"
+  ]
+}
