@@ -1,4 +1,9 @@
+mod render;
+
 use wasm_bindgen::prelude::*;
+use wasm_bindgen::{JsCast};
+use web_sys::{WebGlRenderingContext};
+use render::{Render, RenderBuilder};
 
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
 // allocator.
@@ -6,19 +11,85 @@ use wasm_bindgen::prelude::*;
 #[global_allocator]
 static ALLOC: wee_alloc::WeeAlloc = wee_alloc::WeeAlloc::INIT;
 
-// Called by our JS entry point to run the example.
 #[wasm_bindgen]
-pub fn run() -> Result<(), JsValue> {
+extern "C" {
+    #[wasm_bindgen(js_namespace = console)]
+    fn log(s: &str);
+}
+
+macro_rules! console_log {
+    ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
+}
+
+#[wasm_bindgen]
+#[derive(Debug)]
+pub struct Runtime {
+  render: render::Render,
+}
+
+#[wasm_bindgen]
+impl Runtime {
+  fn new(render: Render) -> Self {
+    Runtime { render }
+  }
+
+  #[wasm_bindgen(js_name = "debugState")]
+  pub fn debug_state(&self) {
+    console_log!("Debug: {:#?}", self);
+  }
+}
+
+#[wasm_bindgen]
+#[derive(Debug)]
+pub struct RuntimeBuilder {
+  render_builder: RenderBuilder,
+}
+
+#[wasm_bindgen]
+impl RuntimeBuilder {
+  #[wasm_bindgen(constructor)]
+  pub fn new() -> Result<RuntimeBuilder, JsValue> {
+    let render_builder = RenderBuilder::new();
+    Ok(RuntimeBuilder { render_builder })
+  }
+
+  #[wasm_bindgen(js_name = "linkWebglContext")]
+  pub fn link_webgl_context(&mut self, maybe_context: JsValue) -> Result<(), JsValue> {
+    return maybe_context.dyn_into::<WebGlRenderingContext>()
+      .map(|context| self.render_builder.set_context(context))
+      .map_err(|value| {
+        let message = format!("expected web gl context, instead got {:?}", value);
+        return JsValue::from_str(message.as_ref())
+      });
+  }
+
+  #[wasm_bindgen(js_name = "linkFragShader")]
+  pub fn link_frag_shader(&mut self, shader_source: &str) -> Result<(), JsValue> {
+    return self.render_builder.set_frag_shader(shader_source)
+      .map_err(|err| JsValue::from_str(err.to_string().as_ref()))
+  }
+
+  #[wasm_bindgen(js_name = "linkVertShader")]
+  pub fn link_vert_shader(&mut self, shader_source: &str) -> Result<(), JsValue> {
+    return self.render_builder.set_vert_shader(shader_source)
+      .map_err(|err| JsValue::from_str(err.to_string().as_ref()))
+  }
+
+  #[wasm_bindgen(js_name = "createRuntime")]
+  pub fn create_runtime(&mut self) -> Result<Runtime, JsValue> {
+    let render = self.render_builder.build_render()
+      .map_err(|err| JsValue::from_str(err.to_string().as_ref()))?;
+    Ok(Runtime::new(render))
+  }
+
+  #[wasm_bindgen(js_name = "debugState")]
+  pub fn debug_state(&self) {
+    console_log!("Debug: {:#?}", self);
+  }
+}
+
+
+#[wasm_bindgen(js_name = "setupPanicHook")]
+pub fn setup_panic_hook() {
     console_error_panic_hook::set_once();
-
-    let window = web_sys::window().expect("should have a Window");
-    let document = window.document().expect("should have a Document");
-    let body = document.body().expect("should have a body");
-
-    {
-      let text = document.create_text_node("and hello from rust.");
-      body.append_child(&text)?;
-    }
-
-    Ok(())
 }

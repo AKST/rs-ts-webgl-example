@@ -33,6 +33,9 @@ features = [
   "HtmlElement",
   "Node",
   "Text",
+  "WebGlProgram",
+  "WebGlRenderingContext",
+  "WebGlShader",
   "Window",
 ]
 

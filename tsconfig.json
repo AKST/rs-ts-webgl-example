@@ -2,11 +2,12 @@
   "compilerOptions": {
     "allowJs": true,
     "allowSyntheticDefaultImports": true,
+    "baseUrl": ".",
     "downlevelIteration": true,
     "esModuleInterop": true,
     "experimentalDecorators": true,
     "forceConsistentCasingInFileNames": true,
-    "jsx": "preserve",
+    "jsx": "React",
     "isolatedModules": true,
     "lib": [
       "ES2018",
@@ -16,6 +17,12 @@
     "moduleResolution": "node",
     "noEmit": true,
     "resolveJsonModule": true,
+    "paths": {
+      "*": [
+        "src/*",
+        "runtime"
+      ]
+    },
     "skipLibCheck": false,
     "sourceMap": true,
     "strict": true,
