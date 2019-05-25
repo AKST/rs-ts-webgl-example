@@ -30,6 +30,7 @@ export function useRuntime(
 
       const runtime = builder.createRuntime();
       runtime.debugState();
+      runtime.tick();
     } catch (e) {
       onError(e);
     }

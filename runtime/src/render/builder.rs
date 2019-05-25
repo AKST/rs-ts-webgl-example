@@ -1,27 +1,8 @@
 use web_sys::{
-  WebGlProgram,
   WebGlRenderingContext,
   WebGlShader,
 };
-
-#[derive(Debug)]
-pub struct Render {
-  gl: WebGlRenderingContext,
-  vert_shader: WebGlShader,
-  frag_shader: WebGlShader,
-  program: WebGlProgram,
-}
-
-impl Render {
-  pub fn new(
-      gl: WebGlRenderingContext,
-      program: WebGlProgram,
-      frag_shader: WebGlShader,
-      vert_shader: WebGlShader,
-  ) -> Self {
-    Render { gl, vert_shader, frag_shader, program }
-  }
-}
+use crate::render::render::{Render, RenderInitialisationError};
 
 #[derive(Debug)]
 pub struct RenderBuilder {
@@ -71,7 +52,8 @@ impl RenderBuilder {
       .ok_or(BuildError::FailedToLinkProgram)?;
 
     return if did_link {
-      Ok(Render::new(context, program, frag_shader, vert_shader))
+      context.use_program(Some(&program));
+      Ok(Render::create(context, program, frag_shader, vert_shader)?)
     } else {
       Err(BuildError::FailedToLinkProgram)
     };
@@ -112,6 +94,13 @@ pub enum BuildError {
   FailedToLinkProgram,
   CannotCreateShader,
   CannotCreateProgram,
+  InitialisationError(RenderInitialisationError),
+}
+
+impl From<RenderInitialisationError> for BuildError {
+  fn from(error: RenderInitialisationError) -> Self {
+    BuildError::InitialisationError(error)
+  }
 }
 
 impl BuildError {
@@ -127,6 +116,9 @@ impl BuildError {
       BuildError::FailedToLinkProgram => "failed to link program".to_string(),
       BuildError::CannotCreateShader => "could not create a shader from the context".to_string(),
       BuildError::CannotCreateProgram => "could not create a program from the context".to_string(),
+      BuildError::InitialisationError(error) => {
+        format!("failed to initialize render: {}", error.to_string())
+      },
     }
   }
 }

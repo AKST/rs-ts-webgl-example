@@ -3,7 +3,8 @@ mod render;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::{JsCast};
 use web_sys::{WebGlRenderingContext};
-use render::{Render, RenderBuilder};
+use render::render::{Render};
+use render::builder::RenderBuilder;
 
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
 // allocator.
@@ -24,13 +25,18 @@ macro_rules! console_log {
 #[wasm_bindgen]
 #[derive(Debug)]
 pub struct Runtime {
-  render: render::Render,
+  render: Render,
 }
 
 #[wasm_bindgen]
 impl Runtime {
   fn new(render: Render) -> Self {
     Runtime { render }
+  }
+
+  #[wasm_bindgen]
+  pub fn tick(&self) {
+    self.render.draw();
   }
 
   #[wasm_bindgen(js_name = "debugState")]
