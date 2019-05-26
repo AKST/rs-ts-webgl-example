@@ -3,8 +3,7 @@ use web_sys::{
   WebGlShader,
 };
 use super::render::{Render, RenderInitialisationError};
-use super::context::{WebRenderAPI};
-use super::context::data::{WebRenderBuffer};
+use super::context::{WebRenderAPI, WebRenderBuffer};
 
 pub type WebRender = Render<WebRenderAPI, WebRenderBuffer>;
 

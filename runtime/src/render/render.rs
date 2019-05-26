@@ -1,6 +1,6 @@
 use super::context::{AttributeKey, RenderAPI, RenderApiError};
-use super::context::data::{Float32View, DataViewError, View};
-use super::context::constants::{
+use super::data::{Float32View, DataViewError, View};
+use super::constants::{
   BufferKind,
   DrawKind,
   ClearMask,
