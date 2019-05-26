@@ -1,6 +1,6 @@
-use super::api::{AttributeKey, RenderAPI, RenderApiError};
-use super::data::{Float32View, DataViewError, View};
-use super::constants::{
+use super::render::api::{AttributeKey, RenderAPI, RenderApiError};
+use super::render::data::{Float32View, DataViewError, View};
+use super::render::constants::{
   BufferKind,
   DrawKind,
   ClearMask,
@@ -69,8 +69,8 @@ impl From<DataViewError> for RenderLoopInitError {
   }
 }
 
-impl RenderLoopInitError {
-  pub fn to_string(self) -> String {
+impl ToString for RenderLoopInitError {
+  fn to_string(&self) -> String {
     match self {
       RenderLoopInitError::RenderApiError(e) => format!("RenderApiError: {}", e.to_string()),
       RenderLoopInitError::DataViewError(e) => format!("DataViewError: {}", e.to_string()),

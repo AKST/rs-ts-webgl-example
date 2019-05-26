@@ -213,8 +213,8 @@ pub enum RenderApiError {
   InvalidAttributeName(String),
 }
 
-impl RenderApiError {
-  pub fn to_string(self) -> String {
+impl ToString for RenderApiError {
+   fn to_string(&self) -> String {
     match self {
       RenderApiError::FailedToCreateBuffer => "Failed to create buffer".to_string(),
       RenderApiError::InvalidAttributeName(s) => format!("Invalid attribute name, {}", s),

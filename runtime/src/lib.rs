@@ -1,9 +1,12 @@
-mod render;
+pub mod render;
+pub mod render_loop;
 
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::{JsCast};
 use web_sys::{WebGlRenderingContext};
-use render::builder::{RenderBuilder, WebRenderLoop};
+use render::builder::{RenderBuilder};
+use render::api::{WebRenderAPI, WebRenderBuffer};
+use render_loop::{RenderLoop};
 
 // When the `wee_alloc` feature is enabled, use `wee_alloc` as the global
 // allocator.
@@ -20,6 +23,8 @@ extern "C" {
 macro_rules! console_log {
     ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
 }
+
+type WebRenderLoop = RenderLoop<WebRenderAPI, WebRenderBuffer>;
 
 #[wasm_bindgen]
 #[derive(Debug)]
@@ -48,6 +53,10 @@ impl Runtime {
 #[derive(Debug)]
 pub struct RuntimeBuilder {
   render_builder: RenderBuilder,
+}
+
+fn error_to_string<E>(error: E) -> JsValue where E: ToString {
+  return JsValue::from_str(error.to_string().as_ref())
 }
 
 #[wasm_bindgen]
@@ -82,9 +91,10 @@ impl RuntimeBuilder {
 
   #[wasm_bindgen(js_name = "createRuntime")]
   pub fn create_runtime(&mut self) -> Result<Runtime, JsValue> {
-    let render = self.render_builder.build_render()
-      .map_err(|err| JsValue::from_str(err.to_string().as_ref()))?;
-    Ok(Runtime::new(render))
+    self.render_builder.build_render_api()
+      .map_err(error_to_string)
+      .and_then(|render_api| RenderLoop::create(render_api).map_err(error_to_string))
+      .map(Runtime::new)
   }
 
   #[wasm_bindgen(js_name = "debugState")]
