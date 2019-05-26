@@ -39,11 +39,13 @@ export const Canvas = React.memo(function Canvas<T>(props: CanvasProps<T>) {
   );
 
   return (
-      <canvas
-          ref={setCanvasEl}
-          className={styles.canvasRoot}
-          width={width}
-          height={height}
-      />
+      <div className={styles.background}>
+        <canvas
+            ref={setCanvasEl}
+            className={styles.canvas}
+            width={width}
+            height={height}
+        />
+      </div>
   );
 });

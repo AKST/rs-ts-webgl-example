@@ -26,16 +26,23 @@ macro_rules! console_log {
 
 type WebRenderLoop = RenderLoop<WebRenderAPI, WebRenderBuffer>;
 
+#[derive(Debug, Copy, Clone)]
+struct Dimensions {
+  width: i32,
+  height: i32,
+}
+
 #[wasm_bindgen]
 #[derive(Debug)]
 pub struct Runtime {
   render_loop: WebRenderLoop,
+  dimensions: Dimensions,
 }
 
 #[wasm_bindgen]
 impl Runtime {
-  fn new(render_loop: WebRenderLoop) -> Self {
-    Runtime { render_loop }
+  fn new(render_loop: WebRenderLoop, dimensions: Dimensions) -> Self {
+    Runtime { render_loop, dimensions }
   }
 
   #[wasm_bindgen]
@@ -47,11 +54,18 @@ impl Runtime {
   pub fn debug_state(&self) {
     console_log!("Debug: {:#?}", self);
   }
+
+  #[wasm_bindgen(js_name = "setDimensions")]
+  pub fn set_dimensions(&mut self, width: i32, height: i32) {
+    self.dimensions = Dimensions { width, height };
+    self.render_loop.update_viewport(width, height);
+  }
 }
 
 #[wasm_bindgen]
 #[derive(Debug)]
 pub struct RuntimeBuilder {
+  dimensions: Option<Dimensions>,
   render_builder: RenderBuilder,
 }
 
@@ -64,7 +78,8 @@ impl RuntimeBuilder {
   #[wasm_bindgen(constructor)]
   pub fn new() -> Result<RuntimeBuilder, JsValue> {
     let render_builder = RenderBuilder::new();
-    Ok(RuntimeBuilder { render_builder })
+    let dimensions = None;
+    Ok(RuntimeBuilder { render_builder, dimensions })
   }
 
   #[wasm_bindgen(js_name = "linkWebglContext")]
@@ -91,10 +106,18 @@ impl RuntimeBuilder {
 
   #[wasm_bindgen(js_name = "createRuntime")]
   pub fn create_runtime(&mut self) -> Result<Runtime, JsValue> {
-    self.render_builder.build_render_api()
+    let render_loop = self.render_builder.build_render_api()
       .map_err(error_to_string)
-      .and_then(|render_api| RenderLoop::create(render_api).map_err(error_to_string))
-      .map(Runtime::new)
+      .and_then(|render_api| RenderLoop::create(render_api).map_err(error_to_string))?;
+
+    let dimensions = self.dimensions.ok_or("need dimensions before building runtime")?;
+
+    Ok(Runtime::new(render_loop, dimensions))
+  }
+
+  #[wasm_bindgen(js_name = "setDimensions")]
+  pub fn set_dimensions(&mut self, width: i32, height: i32) {
+    self.dimensions = Some(Dimensions { width, height });
   }
 
   #[wasm_bindgen(js_name = "debugState")]

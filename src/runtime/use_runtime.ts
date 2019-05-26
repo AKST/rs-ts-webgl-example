@@ -12,43 +12,69 @@ export function useRuntime(
     vertShader: string,
     fragShader: string,
 ) {
+  const [runtime, setRuntime] = React.useState<Runtime | undefined>();
   const getContext = createContextFactory(canvas);
 
-  React.useEffect(() => {
+  React.useEffect(function setupPanicHook() {
+    if (module == null) return;
+    module.setupPanicHook();
+  }, [module]);
+
+
+  React.useEffect(function initializeRuntime() {
     if (module == null || canvas == null) return;
 
-    module.setupPanicHook();
-
-    const builder = new module.RuntimeBuilder();
     const context = getContext(canvas);
+    const builder = new module.RuntimeBuilder();
 
     try {
       builder.linkWebglContext(context);
       builder.linkVertShader(vertShader);
       builder.linkFragShader(fragShader);
+      builder.setDimensions(width, height);
       builder.debugState();
 
       const runtime = builder.createRuntime();
       runtime.debugState();
       runtime.tick();
+      setRuntime(runtime);
+
+      builder.free();
+
+      return () => {
+        setRuntime(undefined);
+        runtime.free();
+      };
     } catch (e) {
       onError(e);
     }
-  }, [
-    onError,
-    fragShader,
-    vertShader,
-    canvas,
-    module,
-  ]);
-}
+  }, [fragShader, vertShader, canvas, module]);
 
-function createRuntimeFactory(module?: RuntimeModule) {
-  return useSingletonFactory((module: RuntimeModule) => new module.Runtime(), [module]);
+  React.useEffect(function onResize() {
+    if (runtime == null) return;
+
+    try {
+      runtime.setDimensions(width, height);
+      runtime.tick();
+    } catch (e) {
+      onError(e);
+    }
+  }, [width, height, runtime]);
+
+  React.useEffect(function animationLoop() {
+    if (runtime == null) return;
+
+    let animationFrame = requestAnimationFrame(function frame() {
+      runtime.tick();
+      requestAnimationFrame(frame);
+    });
+
+    return () => cancelAnimationFrame(animationFrame);
+  }, [runtime]);
 }
 
 function createContextFactory(canvas?: HTMLCanvasElement) {
-  return useSingletonFactory((canvas: HTMLCanvasElement) => {
+  return useSingletonFactory((canvas: HTMLCanvasElement): WebGLRenderingContext => {
     return checkExists(
         canvas.getContext("webgl"),
         'webgl is needed to run this',

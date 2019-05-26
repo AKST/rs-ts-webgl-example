@@ -50,6 +50,10 @@ impl<R, B> RenderLoop<R, B> where R: RenderAPI<Buffer=B>, B: HasBufferKind {
     let count = (self.view.length() / 3) as i32;
     self.context.draw_arrays(DrawArrayKind::Triangles, 0, count);
   }
+
+  pub fn update_viewport(&self, width: i32, height: i32) {
+    self.context.set_viewport(0, 0, width, height);
+  }
 }
 
 pub enum RenderLoopInitError {

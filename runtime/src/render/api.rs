@@ -44,16 +44,6 @@ pub trait RenderAPI {
   type Buffer: HasBufferKind;
 
   /**
-   * Wrapper around `WebGlRenderingContext::create_buffer`.
-   *
-   * https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.WebGlRenderingContext.html#method.create_buffer
-   */
-  fn create_buffer(
-      &self,
-      kind: BufferKind,
-  ) -> Result<Self::Buffer, RenderApiError>;
-
-  /**
    * Wrapper around `WebGlRenderingContext::bind_buffer`.
    *
    * https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.WebGlRenderingContext.html#method.bind_buffer
@@ -64,35 +54,6 @@ pub trait RenderAPI {
       view: &V,
       draw_kind: DrawKind,
   ) where V: View;
-
-  /**
-   * Type safe way of retrieving attributes from the shader.
-   */
-  fn get_attribute<AK>(&self, key: AK) -> Result<AttributeValue, RenderApiError>
-      where AK: AttributeKey;
-
-  /**
-   * Wrapper around `WebGlRenderingContext::vertex_attrib_pointer_with_i32`.
-   *
-   * https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.WebGlRenderingContext.html#method.vertex_attrib_pointer_with_i32
-   */
-  fn vertex_attrib_pointer_with_i32<A>(
-      &self,
-      key: A,
-      size: i32,
-      precision: ViewPrecision,
-      normalized: bool,
-      stride: i32,
-      offset: i32
-  ) -> Result<(), RenderApiError> where A: IntoAttributeValue;
-
-  /**
-   * Wrapper around `WebGlRenderingContext::enable_vertex_attrib_array`.
-   *
-   * https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.WebGlRenderingContext.html#method.enable_vertex_attrib_array
-   */
-  fn enable_vertex_attrib_array<A>(&self, key: A) -> Result<(), RenderApiError>
-      where A: IntoAttributeValue;
 
   /**
    * Wrapper around `WebGlRenderingContext::clear_color`.
@@ -109,11 +70,55 @@ pub trait RenderAPI {
   fn clear(&self, mask: ClearMask);
 
   /**
+   * Wrapper around `WebGlRenderingContext::create_buffer`.
+   *
+   * https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.WebGlRenderingContext.html#method.create_buffer
+   */
+  fn create_buffer(
+      &self,
+      kind: BufferKind,
+  ) -> Result<Self::Buffer, RenderApiError>;
+
+  /**
    * Wrapper around `WebGlRenderingContext::draw_arrays`.
    *
    * https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.WebGlRenderingContext.html#method.draw_arrays
    */
   fn draw_arrays(&self, mode: DrawArrayKind, first: i32, count: i32);
+
+  /**
+   * Wrapper around `WebGlRenderingContext::enable_vertex_attrib_array`.
+   *
+   * https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.WebGlRenderingContext.html#method.enable_vertex_attrib_array
+   */
+  fn enable_vertex_attrib_array<A>(&self, key: A) -> Result<(), RenderApiError>
+      where A: IntoAttributeValue;
+
+  /**
+   * Type safe way of retrieving attributes from the shader.
+   */
+  fn get_attribute<AK>(&self, key: AK) -> Result<AttributeValue, RenderApiError>
+      where AK: AttributeKey;
+
+  /**
+   * Type safe way of retrieving attributes from the shader.
+   */
+  fn set_viewport(&self, x: i32, y: i32, width: i32, height: i32);
+
+  /**
+   * Wrapper around `WebGlRenderingContext::vertex_attrib_pointer_with_i32`.
+   *
+   * https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.WebGlRenderingContext.html#method.vertex_attrib_pointer_with_i32
+   */
+  fn vertex_attrib_pointer_with_i32<A>(
+      &self,
+      key: A,
+      size: i32,
+      precision: ViewPrecision,
+      normalized: bool,
+      stride: i32,
+      offset: i32
+  ) -> Result<(), RenderApiError> where A: IntoAttributeValue;
 }
 
 #[derive(Debug)]
@@ -128,17 +133,11 @@ impl WebRenderAPI {
   }
 }
 
+/**
+ * The Web Gl binding for the interface.
+ */
 impl RenderAPI for WebRenderAPI {
   type Buffer = WebRenderBuffer;
-
-  fn create_buffer(
-      &self,
-      kind: BufferKind,
-  ) -> Result<Self::Buffer, RenderApiError> {
-    self.gl.create_buffer().ok_or(RenderApiError::FailedToCreateBuffer).map(|internal| {
-      WebRenderBuffer { kind, internal }
-    })
-  }
 
   fn bind_buffer<V>(
       &self,
@@ -152,10 +151,36 @@ impl RenderAPI for WebRenderAPI {
     self.gl.buffer_data_with_array_buffer_view(kind, view.object(), draw)
   }
 
+  fn clear_color(&self, red: f32, green: f32, blue: f32, alpha: f32) {
+    self.gl.clear_color(red, green, blue, alpha);
+  }
+
+  fn clear(&self, mask: ClearMask) {
+    self.gl.clear(mask.clear_mask_constant());
+  }
+
+  fn create_buffer(&self, kind: BufferKind) -> Result<Self::Buffer, RenderApiError> {
+    self.gl.create_buffer().ok_or(RenderApiError::FailedToCreateBuffer).map(|internal| {
+      WebRenderBuffer { kind, internal }
+    })
+  }
+
+  fn draw_arrays(&self, mode: DrawArrayKind, first: i32, count: i32) {
+    self.gl.draw_arrays(mode.draw_array_kind_constant(), first, count);
+  }
+
+  fn enable_vertex_attrib_array<A>(&self, key: A) -> Result<(), RenderApiError> where A: IntoAttributeValue {
+    key.with_context(self).map(|i| self.gl.enable_vertex_attrib_array(i))
+  }
+
   fn get_attribute<AK>(&self, key: AK) -> Result<AttributeValue, RenderApiError> where AK: AttributeKey {
     let name = key.name();
     let glint = self.gl.get_attrib_location(&self.program, name);
     u32::try_from(glint).map_err(|_| RenderApiError::InvalidAttributeName(name.to_string()))
+  }
+
+  fn set_viewport(&self, x: i32, y: i32, width: i32, height: i32) {
+    self.gl.viewport(x, y, width, height);
   }
 
   fn vertex_attrib_pointer_with_i32<A>(
@@ -178,22 +203,6 @@ impl RenderAPI for WebRenderAPI {
       )
     })
   }
-
-  fn enable_vertex_attrib_array<A>(&self, key: A) -> Result<(), RenderApiError> where A: IntoAttributeValue {
-    key.with_context(self).map(|i| self.gl.enable_vertex_attrib_array(i))
-  }
-
-  fn clear_color(&self, red: f32, green: f32, blue: f32, alpha: f32) {
-    self.gl.clear_color(red, green, blue, alpha);
-  }
-
-  fn clear(&self, mask: ClearMask) {
-    self.gl.clear(mask.clear_mask_constant());
-  }
-
-  fn draw_arrays(&self, mode: DrawArrayKind, first: i32, count: i32) {
-    self.gl.draw_arrays(mode.draw_array_kind_constant(), first, count);
-  }
 }
 
 #[derive(Clone, Debug)]
@@ -214,7 +223,7 @@ pub enum RenderApiError {
 }
 
 impl ToString for RenderApiError {
-   fn to_string(&self) -> String {
+  fn to_string(&self) -> String {
     match self {
       RenderApiError::FailedToCreateBuffer => "Failed to create buffer".to_string(),
       RenderApiError::InvalidAttributeName(s) => format!("Invalid attribute name, {}", s),
