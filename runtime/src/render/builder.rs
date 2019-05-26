@@ -1,11 +1,8 @@
-use web_sys::{
-  WebGlRenderingContext,
-  WebGlShader,
-};
-use super::render::{Render, RenderInitialisationError};
-use super::context::{WebRenderAPI, WebRenderBuffer};
+use web_sys::{WebGlRenderingContext, WebGlShader};
+use super::api::{WebRenderAPI, WebRenderBuffer};
+use super::render_loop::{RenderLoop, RenderLoopInitError};
 
-pub type WebRender = Render<WebRenderAPI, WebRenderBuffer>;
+pub type WebRenderLoop = RenderLoop<WebRenderAPI, WebRenderBuffer>;
 
 #[derive(Debug)]
 pub struct RenderBuilder {
@@ -39,7 +36,7 @@ impl RenderBuilder {
     Ok(())
   }
 
-  pub fn build_render(&self) -> Result<WebRender, BuildError> {
+  pub fn build_render(&self) -> Result<WebRenderLoop, BuildError> {
     let context = self.webgl_context.clone().ok_or(BuildError::ExpectedContext)?;
     let vert_shader = self.vert_shader.clone().ok_or(BuildError::ExpectedVertShaded)?;
     let frag_shader = self.frag_shader.clone().ok_or(BuildError::ExpectedFragShaded)?;
@@ -56,7 +53,9 @@ impl RenderBuilder {
 
     return if did_link {
       context.use_program(Some(&program));
-      Ok(Render::create(WebRenderAPI::create(context, program))?)
+
+      let render = WebRenderAPI::create(context, program);
+      Ok(RenderLoop::create(render)?)
     } else {
       Err(BuildError::FailedToLinkProgram)
     };
@@ -97,12 +96,12 @@ pub enum BuildError {
   FailedToLinkProgram,
   CannotCreateShader,
   CannotCreateProgram,
-  InitialisationError(RenderInitialisationError),
+  RenderLoopInitError(RenderLoopInitError),
 }
 
-impl From<RenderInitialisationError> for BuildError {
-  fn from(error: RenderInitialisationError) -> Self {
-    BuildError::InitialisationError(error)
+impl From<RenderLoopInitError> for BuildError {
+  fn from(error: RenderLoopInitError) -> Self {
+    BuildError::RenderLoopInitError(error)
   }
 }
 
@@ -119,7 +118,7 @@ impl BuildError {
       BuildError::FailedToLinkProgram => "failed to link program".to_string(),
       BuildError::CannotCreateShader => "could not create a shader from the context".to_string(),
       BuildError::CannotCreateProgram => "could not create a program from the context".to_string(),
-      BuildError::InitialisationError(error) => {
+      BuildError::RenderLoopInitError(error) => {
         format!("failed to initialize render: {}", error.to_string())
       },
     }

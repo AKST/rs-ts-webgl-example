@@ -29,14 +29,35 @@ pub trait IntoAttributeValue {
   fn with_context<C>(self, context: &C) -> Result<AttributeValue, RenderApiError> where C: RenderAPI;
 }
 
+/**
+ * A wrapper around `WebGlRenderingContext` to reduce the
+ * number of repetitive constants, but also adds a bit more
+ * type safety with enums in the place of u32 constants, and
+ * requires attributes & uniforms to be accessed via your
+ * own defined enum to avoid passing around strings.
+ *
+ * See here for more on `WebGlRenderingContext`:
+ *
+ * https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.WebGlRenderingContext.html
+ */
 pub trait RenderAPI {
   type Buffer: HasBufferKind;
 
+  /**
+   * Wrapper around `WebGlRenderingContext::create_buffer`.
+   *
+   * https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.WebGlRenderingContext.html#method.create_buffer
+   */
   fn create_buffer(
       &self,
       kind: BufferKind,
   ) -> Result<Self::Buffer, RenderApiError>;
 
+  /**
+   * Wrapper around `WebGlRenderingContext::bind_buffer`.
+   *
+   * https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.WebGlRenderingContext.html#method.bind_buffer
+   */
   fn bind_buffer<V>(
       &self,
       buffer: &Self::Buffer,
@@ -44,9 +65,17 @@ pub trait RenderAPI {
       draw_kind: DrawKind,
   ) where V: View;
 
+  /**
+   * Type safe way of retrieving attributes from the shader.
+   */
   fn get_attribute<AK>(&self, key: AK) -> Result<AttributeValue, RenderApiError>
       where AK: AttributeKey;
 
+  /**
+   * Wrapper around `WebGlRenderingContext::vertex_attrib_pointer_with_i32`.
+   *
+   * https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.WebGlRenderingContext.html#method.vertex_attrib_pointer_with_i32
+   */
   fn vertex_attrib_pointer_with_i32<A>(
       &self,
       key: A,
@@ -57,13 +86,33 @@ pub trait RenderAPI {
       offset: i32
   ) -> Result<(), RenderApiError> where A: IntoAttributeValue;
 
+  /**
+   * Wrapper around `WebGlRenderingContext::enable_vertex_attrib_array`.
+   *
+   * https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.WebGlRenderingContext.html#method.enable_vertex_attrib_array
+   */
   fn enable_vertex_attrib_array<A>(&self, key: A) -> Result<(), RenderApiError>
       where A: IntoAttributeValue;
 
+  /**
+   * Wrapper around `WebGlRenderingContext::clear_color`.
+   *
+   * https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.WebGlRenderingContext.html#method.clear_color
+   */
   fn clear_color(&self, red: f32, green: f32, blue: f32, alpha: f32);
 
+  /**
+   * Wrapper around `WebGlRenderingContext::clear`.
+   *
+   * https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.WebGlRenderingContext.html#method.clear
+   */
   fn clear(&self, mask: ClearMask);
 
+  /**
+   * Wrapper around `WebGlRenderingContext::draw_arrays`.
+   *
+   * https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.WebGlRenderingContext.html#method.draw_arrays
+   */
   fn draw_arrays(&self, mode: DrawArrayKind, first: i32, count: i32);
 }
 
