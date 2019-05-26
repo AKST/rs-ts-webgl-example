@@ -1,27 +1,44 @@
-Welcome to the Glitch BETA
+Rust + Typescript WebGl Demo
 =========================
 
-Click `Show` in the header to see your app live. Updates to your code will instantly deploy and update live.
+Just wanted to test some web gl stuff with web assembly & typescript.
+Originally I wanted to use glitch.com but they don't support rust beyond
+cargo build without any dependencies at the moment (but their support
+pages straight up say they don't support it).
 
-Glitch is a developer playground that lets you code a real web-app without the slow setup and deployment steps.
+## Running Locally
 
-[About Glitch](https://glitch.com/about)
+### Dependencies
 
+- [`Cargo`][cargo] to build rust
+- [`wasm-pack`][wasmpack] for wasm things
+- Either [Yarn], [npm], or whatever js package manager, although
+  you may want to update the script for starting to use your package
+  manager, if you're not using yarn.
 
-Your Project
-------------
+[npm]: https://www.npmjs.com/
+[Yarn]: https://yarnpkg.com/en/
+[cargo]: https://crates.io/
+[wasmpack]: https://github.com/rustwasm/wasm-pack
 
-On the back-end,
-- your app starts at `server.js`
-- add frameworks and packages in `package.json`
-- safely store app secrets in `.env`
+## Project Layout
 
-On the front-end,
-- edit `client.js`, `style.css` and `index.html`
-- drag in `assets`, like images or music, to add them to your project
+### TypeScript + CSS, DOM wrapper.
 
+Anyways there is a light typescript wrapper around the web assembly portion
+that gets the canvas, context, shaders, and tracks bounds of the canvas. So
+you could techinically drop the canvas into another application and it'll
+scale to the window bounds it is placed in, but that is kinda incidential.
+All this lives in `src`.
 
-Made by Fog Creek
------------------
+### Shader Location.
 
-\ ゜o゜)ノ
+Since I use webpack to make bundling the application alot simpler to avoid
+having to use ajax calls to get the shader source or do that hacky thing
+were you put the shader in a sciprt tag. I can just import the shaders as
+normal modules. The shaders live in `src/shaders`.
+
+### Rust Core.
+
+Rust portion all lives in `runtime`, and the bulk of the logic takes place
+in here. Bindings to the binary are generated with `wasm-bindgen`.
