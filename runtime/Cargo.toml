@@ -29,6 +29,7 @@ wee_alloc = { version = "0.4.2", optional = true }
 [dependencies.web-sys]
 version = "0.3.22"
 features = [
+  "console",
   "Document",
   "Element",
   "HtmlElement",
@@ -38,6 +39,7 @@ features = [
   "WebGlProgram",
   "WebGlRenderingContext",
   "WebGlShader",
+  "WebGlUniformLocation",
   "Window",
 ]
 

@@ -1,5 +1,6 @@
-use wasm_bindgen::JsCast;
+use wasm_bindgen::{JsCast, JsValue};
 use js_sys::{Object, Float32Array, WebAssembly};
+use web_sys::console::log_1;
 use super::constants::{HasBufferKind, ViewPrecision, HasViewPrecision};
 
 #[derive(Clone, Copy, Debug)]
@@ -22,6 +23,22 @@ pub trait View: HasViewPrecision {
 
 impl Float32View {
   pub fn create(data_raw: &[f32]) -> Result<Self, DataViewError> {
+    let data = Float32View::build_data(data_raw)?;
+    Ok(Float32View { data, size: data_raw.len() })
+  }
+
+  pub fn update_data(&mut self, data_raw: &[f32]) -> Result<(), DataViewError> {
+    self.data = Float32View::build_data(data_raw)?;
+    self.size = data_raw.len();
+    return Ok(())
+  }
+
+  pub fn log(&self) {
+    let value = JsValue::from(&self.data);
+    log_1(&value);
+  }
+
+  fn build_data(data_raw: &[f32]) -> Result<js_sys::Float32Array, DataViewError> {
     let memory_buffer = wasm_bindgen::memory()
       .dyn_into::<WebAssembly::Memory>()
       .map_err(|_| DataViewError::FailedToCreateMemory)?
@@ -30,8 +47,7 @@ impl Float32View {
     let data_location = data_raw.as_ptr() as u32 / 4;
     let data = js_sys::Float32Array::new(&memory_buffer)
       .subarray(data_location, data_location + data_raw.len() as u32);
-
-    Ok(Float32View { data, size: data_raw.len() })
+    Ok(data)
   }
 }
 

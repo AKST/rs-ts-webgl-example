@@ -106,11 +106,15 @@ impl RuntimeBuilder {
 
   #[wasm_bindgen(js_name = "createRuntime")]
   pub fn create_runtime(&mut self) -> Result<Runtime, JsValue> {
+    let dimensions = self.dimensions.ok_or("need dimensions before building runtime")?;
     let render_loop = self.render_builder.build_render_api()
       .map_err(error_to_string)
-      .and_then(|render_api| RenderLoop::create(render_api).map_err(error_to_string))?;
-
-    let dimensions = self.dimensions.ok_or("need dimensions before building runtime")?;
+      .and_then(|render_api|
+          RenderLoop::create(
+            render_api,
+            dimensions.width,
+            dimensions.height,
+          ).map_err(error_to_string))?;
 
     Ok(Runtime::new(render_loop, dimensions))
   }

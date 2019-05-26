@@ -32,10 +32,8 @@ export function useRuntime(
       builder.linkVertShader(vertShader);
       builder.linkFragShader(fragShader);
       builder.setDimensions(width, height);
-      builder.debugState();
 
       const runtime = builder.createRuntime();
-      runtime.debugState();
       runtime.tick();
       setRuntime(runtime);
 
@@ -55,7 +53,6 @@ export function useRuntime(
 
     try {
       runtime.setDimensions(width, height);
-      runtime.tick();
     } catch (e) {
       onError(e);
     }

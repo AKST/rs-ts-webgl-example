@@ -37,6 +37,7 @@ module.exports = {
     alias: {
       ...createAliasObject('src'),
       rust_runtime: path.resolve(__dirname, "runtime"),
+      shaders: path.resolve(__dirname, "shaders"),
     },
   },
   module: {

@@ -1,5 +1,10 @@
 use std::convert::TryFrom;
-use web_sys::{WebGlProgram, WebGlRenderingContext, WebGlBuffer};
+use web_sys::{
+  WebGlBuffer,
+  WebGlProgram,
+  WebGlRenderingContext,
+  WebGlUniformLocation,
+};
 use super::constants::{
   BufferKind,
   ClearMask,
@@ -14,8 +19,7 @@ use super::constants::{
 };
 use super::data::{View};
 
-type AttributeValue = u32;
-type UniformValue = u32;
+type AttributeIndex = u32;
 
 pub trait AttributeKey {
   fn name(&self) -> &str;
@@ -25,8 +29,12 @@ pub trait UniformKey {
   fn name(&self) -> &str;
 }
 
-pub trait IntoAttributeValue {
-  fn with_context<C>(self, context: &C) -> Result<AttributeValue, RenderApiError> where C: RenderAPI;
+pub trait IntoAttributeIndex {
+  fn with_context<C>(self, context: &C) -> Result<AttributeIndex, RenderApiError> where C: RenderAPI;
+}
+
+pub trait IntoUniformIndex {
+  fn with_context<C>(self, context: &C) -> Result<C::UniformIndex, RenderApiError> where C: RenderAPI;
 }
 
 /**
@@ -42,6 +50,7 @@ pub trait IntoAttributeValue {
  */
 pub trait RenderAPI {
   type Buffer: HasBufferKind;
+  type UniformIndex;
 
   /**
    * Wrapper around `WebGlRenderingContext::bind_buffer`.
@@ -92,18 +101,31 @@ pub trait RenderAPI {
    * https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.WebGlRenderingContext.html#method.enable_vertex_attrib_array
    */
   fn enable_vertex_attrib_array<A>(&self, key: A) -> Result<(), RenderApiError>
-      where A: IntoAttributeValue;
+      where A: IntoAttributeIndex;
 
   /**
-   * Type safe way of retrieving attributes from the shader.
+   * Type safe way of retrieving attribute indexs from the shader.
    */
-  fn get_attribute<AK>(&self, key: AK) -> Result<AttributeValue, RenderApiError>
+  fn get_attribute<AK>(&self, key: AK) -> Result<AttributeIndex, RenderApiError>
       where AK: AttributeKey;
 
   /**
-   * Type safe way of retrieving attributes from the shader.
+   * Type safe way of retrieving uniform indexs from the shader.
+   */
+  fn get_uniform<UK>(&self, key: UK) -> Result<Self::UniformIndex, RenderApiError>
+      where UK: UniformKey;
+
+  /**
+   * Updates the viewport for the shader.
    */
   fn set_viewport(&self, x: i32, y: i32, width: i32, height: i32);
+
+  /**
+   * Type safe wrapper for `uniformf2`
+   *
+   * https://rustwasm.github.io/wasm-bindgen/api/web_sys/struct.WebGlRenderingContext.html#method.uniform2f
+   */
+  fn uniform2f<U>(&self, key: U, x: f32, y: f32) -> Result<(), RenderApiError> where U: IntoUniformIndex;
 
   /**
    * Wrapper around `WebGlRenderingContext::vertex_attrib_pointer_with_i32`.
@@ -118,7 +140,7 @@ pub trait RenderAPI {
       normalized: bool,
       stride: i32,
       offset: i32
-  ) -> Result<(), RenderApiError> where A: IntoAttributeValue;
+  ) -> Result<(), RenderApiError> where A: IntoAttributeIndex;
 }
 
 #[derive(Debug)]
@@ -138,6 +160,7 @@ impl WebRenderAPI {
  */
 impl RenderAPI for WebRenderAPI {
   type Buffer = WebRenderBuffer;
+  type UniformIndex = WebGlUniformLocation;
 
   fn bind_buffer<V>(
       &self,
@@ -169,18 +192,28 @@ impl RenderAPI for WebRenderAPI {
     self.gl.draw_arrays(mode.draw_array_kind_constant(), first, count);
   }
 
-  fn enable_vertex_attrib_array<A>(&self, key: A) -> Result<(), RenderApiError> where A: IntoAttributeValue {
+  fn enable_vertex_attrib_array<A>(&self, key: A) -> Result<(), RenderApiError> where A: IntoAttributeIndex {
     key.with_context(self).map(|i| self.gl.enable_vertex_attrib_array(i))
   }
 
-  fn get_attribute<AK>(&self, key: AK) -> Result<AttributeValue, RenderApiError> where AK: AttributeKey {
+  fn get_attribute<AK>(&self, key: AK) -> Result<AttributeIndex, RenderApiError> where AK: AttributeKey {
     let name = key.name();
     let glint = self.gl.get_attrib_location(&self.program, name);
     u32::try_from(glint).map_err(|_| RenderApiError::InvalidAttributeName(name.to_string()))
   }
 
+  fn get_uniform<UK>(&self, key: UK) -> Result<Self::UniformIndex, RenderApiError> where UK: UniformKey {
+    let name = key.name();
+    let location = self.gl.get_uniform_location(&self.program, name);
+    location.ok_or(RenderApiError::InvalidUniformName(name.to_string()))
+  }
+
   fn set_viewport(&self, x: i32, y: i32, width: i32, height: i32) {
     self.gl.viewport(x, y, width, height);
+  }
+
+  fn uniform2f<U>(&self, key: U, x: f32, y: f32) -> Result<(), RenderApiError> where U: IntoUniformIndex {
+    key.with_context(self).map(|index| self.gl.uniform2f(Some(&index), x, y))
   }
 
   fn vertex_attrib_pointer_with_i32<A>(
@@ -191,7 +224,7 @@ impl RenderAPI for WebRenderAPI {
       normalized: bool,
       stride: i32,
       offset: i32
-  ) -> Result<(), RenderApiError> where A: IntoAttributeValue {
+  ) -> Result<(), RenderApiError> where A: IntoAttributeIndex {
     key.with_context(self).map(|index| {
       self.gl.vertex_attrib_pointer_with_i32(
           index,
@@ -220,6 +253,7 @@ impl HasBufferKind for WebRenderBuffer {
 pub enum RenderApiError {
   FailedToCreateBuffer,
   InvalidAttributeName(String),
+  InvalidUniformName(String),
 }
 
 impl ToString for RenderApiError {
@@ -227,18 +261,25 @@ impl ToString for RenderApiError {
     match self {
       RenderApiError::FailedToCreateBuffer => "Failed to create buffer".to_string(),
       RenderApiError::InvalidAttributeName(s) => format!("Invalid attribute name, {}", s),
+      RenderApiError::InvalidUniformName(s) => format!("Invalid uniform name, {}", s),
     }
   }
 }
 
-impl<A> IntoAttributeValue for A where A: AttributeKey {
-  fn with_context<C>(self, context: &C) -> Result<AttributeValue, RenderApiError> where C: RenderAPI {
+impl<A> IntoAttributeIndex for A where A: AttributeKey {
+  fn with_context<C>(self, context: &C) -> Result<AttributeIndex, RenderApiError> where C: RenderAPI {
     context.get_attribute(self)
   }
 }
 
-impl IntoAttributeValue for AttributeValue {
-  fn with_context<C>(self, _: &C) -> Result<AttributeValue, RenderApiError> where C: RenderAPI {
+impl IntoAttributeIndex for AttributeIndex {
+  fn with_context<C>(self, _: &C) -> Result<AttributeIndex, RenderApiError> where C: RenderAPI {
     Ok(self)
+  }
+}
+
+impl<U> IntoUniformIndex for U where U: UniformKey {
+  fn with_context<C>(self, context: &C) -> Result<C::UniformIndex, RenderApiError> where C: RenderAPI {
+    context.get_uniform(self)
   }
 }
