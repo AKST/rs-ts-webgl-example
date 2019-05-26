@@ -7,9 +7,9 @@ use super::render::api::{
 use super::render::data::{Float32View, DataViewError, View};
 use super::render::constants::{
   BufferKind,
+  DrawArrayKind,
   DrawKind,
   ClearMask,
-  DrawArrayKind,
   HasBufferKind,
 };
 

@@ -2,6 +2,8 @@ attribute vec2 position;
 
 uniform vec2 resolution;
 
+varying vec4 v_color;
+
 void main() {
   // convert the position from pixels to 0.0 to 1.0
   vec2 zeroToOne = position / resolution;
@@ -13,4 +15,5 @@ void main() {
   vec2 clipSpace2d = clipSpace * vec2(1, -1);
 
   gl_Position = vec4(clipSpace2d, 0, 1);
+  v_color = gl_Position * 0.5 + 0.5;
 }
