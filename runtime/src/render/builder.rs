@@ -2,7 +2,11 @@ use web_sys::{
   WebGlRenderingContext,
   WebGlShader,
 };
-use crate::render::render::{Render, RenderInitialisationError};
+use super::render::{Render, RenderInitialisationError};
+use super::context::{WebRenderAPI};
+use super::context::data::{WebRenderBuffer};
+
+pub type WebRender = Render<WebRenderAPI, WebRenderBuffer>;
 
 #[derive(Debug)]
 pub struct RenderBuilder {
@@ -36,7 +40,7 @@ impl RenderBuilder {
     Ok(())
   }
 
-  pub fn build_render(&self) -> Result<Render, BuildError> {
+  pub fn build_render(&self) -> Result<WebRender, BuildError> {
     let context = self.webgl_context.clone().ok_or(BuildError::ExpectedContext)?;
     let vert_shader = self.vert_shader.clone().ok_or(BuildError::ExpectedVertShaded)?;
     let frag_shader = self.frag_shader.clone().ok_or(BuildError::ExpectedFragShaded)?;
@@ -53,7 +57,7 @@ impl RenderBuilder {
 
     return if did_link {
       context.use_program(Some(&program));
-      Ok(Render::create(context, program, frag_shader, vert_shader)?)
+      Ok(Render::create(WebRenderAPI::create(context, program))?)
     } else {
       Err(BuildError::FailedToLinkProgram)
     };

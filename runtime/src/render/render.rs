@@ -1,85 +1,79 @@
-use js_sys::WebAssembly;
-use wasm_bindgen::JsCast;
-use web_sys::{
-  WebGlBuffer,
-  WebGlProgram,
-  WebGlRenderingContext,
-  WebGlShader,
+use super::context::{AttributeKey, RenderAPI, RenderApiError};
+use super::context::data::{Float32View, DataViewError, View};
+use super::context::constants::{
+  BufferKind,
+  DrawKind,
+  ClearMask,
+  DrawArrayKind,
+  HasBufferKind,
 };
 
-#[derive(Debug)]
-pub struct Render {
-  buffer: WebGlBuffer,
-  gl: WebGlRenderingContext,
-  vert_shader: WebGlShader,
-  frag_shader: WebGlShader,
-  program: WebGlProgram,
-  vertices: [f32; 9],
+#[derive(Clone, Copy, Debug)]
+enum Attributes {
+  Position,
 }
 
-impl Render {
-  pub fn create(
-      gl: WebGlRenderingContext,
-      program: WebGlProgram,
-      frag_shader: WebGlShader,
-      vert_shader: WebGlShader,
-  ) -> Result<Self, RenderInitialisationError> {
+impl AttributeKey for Attributes {
+  fn name(&self) -> &str {
+    match self {
+      Attributes::Position => "position"
+    }
+  }
+}
 
-    let vertices: [f32; 9] = [-0.7, -0.7, 0.0, 0.7, -0.7, 0.0, 0.0, 0.7, 0.0];
-    let memory_buffer = wasm_bindgen::memory()
-      .dyn_into::<WebAssembly::Memory>()
-      .map_err(|_| RenderInitialisationError::FailedToCreateMemory)?
-      .buffer();
+#[derive(Debug)]
+pub struct Render<R, B> {
+  view: Float32View,
+  buffer: B,
+  context: R,
+}
 
-    let vertices_location = vertices.as_ptr() as u32 / 4;
-    let vert_array = js_sys::Float32Array::new(&memory_buffer)
-      .subarray(vertices_location, vertices_location + vertices.len() as u32);
+impl<R, B> Render<R, B> where R: RenderAPI<Buffer=B>, B: HasBufferKind {
+  pub fn create(context: R) -> Result<Self, RenderInitialisationError> {
+    let buffer = context.create_buffer(BufferKind::ArrayBuffer)?;
+    let data: [f32; 9] = [-0.7, -0.7, 0.0, 0.7, -0.7, 0.0, 0.0, 0.7, 0.0];
+    let view = Float32View::create(&data)?;
+    context.bind_buffer(&buffer, &view, DrawKind::StaticDraw);
 
-    let buffer = gl
-      .create_buffer()
-      .ok_or(RenderInitialisationError::FailedToCreateBuffer)?;
+    let position = Attributes::Position;
+    let precision = view.get_precision();
+    context.vertex_attrib_pointer_with_i32(position, 3, precision, false, 0, 0)?;
+    context.enable_vertex_attrib_array(position)?;
 
-    gl.bind_buffer(WebGlRenderingContext::ARRAY_BUFFER, Some(&buffer));
-    gl.buffer_data_with_array_buffer_view(
-        WebGlRenderingContext::ARRAY_BUFFER,
-        &vert_array,
-        WebGlRenderingContext::STATIC_DRAW,
-    );
-    gl.vertex_attrib_pointer_with_i32(0, 3, WebGlRenderingContext::FLOAT, false, 0, 0);
-    gl.enable_vertex_attrib_array(0);
-
-    Ok(Render {
-      buffer,
-      gl,
-      vert_shader,
-      frag_shader,
-      program,
-      vertices,
-    })
+    Ok(Render { buffer, view, context })
   }
 
   pub fn draw(&self) {
-    self.gl.clear_color(0.0, 0.0, 0.0, 1.0);
-    self.gl.clear(WebGlRenderingContext::COLOR_BUFFER_BIT);
+    self.context.clear_color(0.0, 0.0, 0.0, 1.0);
+    self.context.clear(ClearMask::ColorBufferBit);
 
-    self.gl.draw_arrays(
-        WebGlRenderingContext::TRIANGLES,
-        0,
-        (self.vertices.len() / 3) as i32,
-    );
+    let count = (self.view.length() / 3) as i32;
+    self.context.draw_arrays(DrawArrayKind::Triangles, 0, count);
   }
 }
 
 pub enum RenderInitialisationError {
-  FailedToCreateMemory,
-  FailedToCreateBuffer,
+  RenderApiError(RenderApiError),
+  DataViewError(DataViewError),
+}
+
+impl From<RenderApiError> for RenderInitialisationError {
+  fn from(error: RenderApiError) -> RenderInitialisationError {
+    RenderInitialisationError::RenderApiError(error)
+  }
+}
+
+impl From<DataViewError> for RenderInitialisationError {
+  fn from(error: DataViewError) -> RenderInitialisationError {
+    RenderInitialisationError::DataViewError(error)
+  }
 }
 
 impl RenderInitialisationError {
   pub fn to_string(self) -> String {
     match self {
-      RenderInitialisationError::FailedToCreateMemory => "Failed to create memory".to_string(),
-      RenderInitialisationError::FailedToCreateBuffer => "Failed to create buffer".to_string(),
+      RenderInitialisationError::RenderApiError(e) => format!("RenderApiError: {}", e.to_string()),
+      RenderInitialisationError::DataViewError(e) => format!("DataViewError: {}", e.to_string()),
     }
   }
 }
