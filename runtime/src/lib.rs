@@ -1,9 +1,10 @@
 pub mod render;
+pub mod math;
 pub mod render_loop;
 
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::{JsCast};
-use web_sys::{WebGlRenderingContext};
+use web_sys::{WebGl2RenderingContext};
 use render::builder::{RenderBuilder};
 use render::api::{WebRenderAPI, WebRenderBuffer};
 use render_loop::{RenderLoop};
@@ -56,9 +57,9 @@ impl Runtime {
   }
 
   #[wasm_bindgen(js_name = "setDimensions")]
-  pub fn set_dimensions(&mut self, width: i32, height: i32) {
+  pub fn set_dimensions(&mut self, width: i32, height: i32) -> Result<(), JsValue> {
     self.dimensions = Dimensions { width, height };
-    self.render_loop.update_viewport(width, height);
+    self.render_loop.update_viewport(width, height).map_err(error_to_string)
   }
 }
 
@@ -84,7 +85,7 @@ impl RuntimeBuilder {
 
   #[wasm_bindgen(js_name = "linkWebglContext")]
   pub fn link_webgl_context(&mut self, maybe_context: JsValue) -> Result<(), JsValue> {
-    return maybe_context.dyn_into::<WebGlRenderingContext>()
+    return maybe_context.dyn_into::<WebGl2RenderingContext>()
       .map(|context| self.render_builder.set_context(context))
       .map_err(|value| {
         let message = format!("expected web gl context, instead got {:?}", value);

@@ -1,10 +1,10 @@
-use web_sys::{WebGlRenderingContext, WebGlShader};
+use web_sys::{WebGl2RenderingContext, WebGlShader};
 use super::api::{WebRenderAPI};
 
 
 #[derive(Debug)]
 pub struct RenderBuilder {
-  webgl_context: Option<WebGlRenderingContext>,
+  webgl_context: Option<WebGl2RenderingContext>,
   vert_shader: Option<WebGlShader>,
   frag_shader: Option<WebGlShader>,
 }
@@ -18,18 +18,18 @@ impl RenderBuilder {
     }
   }
 
-  pub fn set_context(&mut self, context: WebGlRenderingContext) {
+  pub fn set_context(&mut self, context: WebGl2RenderingContext) {
     self.webgl_context = Some(context);
   }
 
   pub fn set_frag_shader(&mut self, shader_source: &str) -> Result<(), BuildError> {
-    let shader_type = WebGlRenderingContext::FRAGMENT_SHADER;
+    let shader_type = WebGl2RenderingContext::FRAGMENT_SHADER;
     self.frag_shader = Some(self.create_shader(shader_source, shader_type)?);
     Ok(())
   }
 
   pub fn set_vert_shader(&mut self, shader_source: &str) -> Result<(), BuildError> {
-    let shader_type = WebGlRenderingContext::VERTEX_SHADER;
+    let shader_type = WebGl2RenderingContext::VERTEX_SHADER;
     self.vert_shader = Some(self.create_shader(shader_source, shader_type)?);
     Ok(())
   }
@@ -45,7 +45,7 @@ impl RenderBuilder {
     context.link_program(&program);
 
     let did_link = context
-      .get_program_parameter(&program, WebGlRenderingContext::LINK_STATUS)
+      .get_program_parameter(&program, WebGl2RenderingContext::LINK_STATUS)
       .as_bool()
       .ok_or(BuildError::FailedToLinkProgram)?;
 
@@ -57,7 +57,7 @@ impl RenderBuilder {
     };
   }
 
-  fn get_context(&self) -> Option<&WebGlRenderingContext> {
+  fn get_context(&self) -> Option<&WebGl2RenderingContext> {
     match &self.webgl_context {
       Some(ref value) => Some(&value),
       None => None,
@@ -72,7 +72,7 @@ impl RenderBuilder {
     context.compile_shader(&shader);
 
     let did_compile = context
-      .get_shader_parameter(&shader, WebGlRenderingContext::COMPILE_STATUS)
+      .get_shader_parameter(&shader, WebGl2RenderingContext::COMPILE_STATUS)
       .as_bool()
       .ok_or(BuildError::FailedToCompileShader(None))?;
 

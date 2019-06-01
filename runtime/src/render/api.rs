@@ -2,16 +2,18 @@ use std::convert::TryFrom;
 use web_sys::{
   WebGlBuffer,
   WebGlProgram,
-  WebGlRenderingContext,
+  WebGl2RenderingContext,
   WebGlUniformLocation,
 };
 use super::constants::{
   BufferKind,
+  BlendFuncFactor,
   ClearMask,
   DrawArrayKind,
   DrawKind,
   ViewPrecision,
   HasBufferKind,
+  HasBlendFuncFactor,
   HasViewPrecision,
   HasClearMaskKind,
   HasDrawArrayKind,
@@ -63,6 +65,20 @@ pub trait RenderAPI {
       view: &V,
       draw_kind: DrawKind,
   ) where V: View;
+
+  /**
+   * Wrapper around `WebGlRenderingContext::blend_color`.
+   *
+   * https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/blendColor
+   */
+  fn blend_color(&self, red: f32, green: f32, blue: f32, alpha: f32);
+
+  /**
+   * Wrapper around `WebGlRenderingContext::blend_func`.
+   *
+   * https://developer.mozilla.org/en-US/docs/Web/API/WebGLRenderingContext/blendFunc
+   */
+  fn blend_func(&self, src: BlendFuncFactor, dst: BlendFuncFactor);
 
   /**
    * Wrapper around `WebGlRenderingContext::clear_color`.
@@ -145,12 +161,12 @@ pub trait RenderAPI {
 
 #[derive(Debug)]
 pub struct WebRenderAPI {
-  gl: WebGlRenderingContext,
+  gl: WebGl2RenderingContext,
   program: WebGlProgram,
 }
 
 impl WebRenderAPI {
-  pub fn create(gl: WebGlRenderingContext, program: WebGlProgram) -> Self {
+  pub fn create(gl: WebGl2RenderingContext, program: WebGlProgram) -> Self {
     WebRenderAPI { gl, program }
   }
 }
@@ -172,6 +188,14 @@ impl RenderAPI for WebRenderAPI {
     let draw = draw_kind.draw_kind_constant();
     self.gl.bind_buffer(kind, Some(&buffer.internal));
     self.gl.buffer_data_with_array_buffer_view(kind, view.object(), draw)
+  }
+
+  fn blend_color(&self, red: f32, green: f32, blue: f32, alpha: f32) {
+    self.gl.blend_color(red, green, blue, alpha);
+  }
+
+  fn blend_func(&self, src: BlendFuncFactor, dst: BlendFuncFactor) {
+    self.gl.blend_func(src.blend_func_factor_constant(), dst.blend_func_factor_constant());
   }
 
   fn clear_color(&self, red: f32, green: f32, blue: f32, alpha: f32) {

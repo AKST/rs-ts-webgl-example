@@ -1,7 +1,8 @@
-use web_sys::WebGlRenderingContext;
+use web_sys::WebGl2RenderingContext;
 
 pub trait Drawwable {
-  fn draw(&self, context: &WebGlRenderingContext) -> Result<(), DrawError>;
+  // TODO(Angus): replace with api
+  fn draw(&self, context: &WebGl2RenderingContext) -> Result<(), DrawError>;
 }
 
 pub enum DrawError {
