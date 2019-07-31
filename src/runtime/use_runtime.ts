@@ -72,9 +72,10 @@ export function useRuntime(
 
 function createContextFactory(canvas?: HTMLCanvasElement) {
   return useSingletonFactory((canvas: HTMLCanvasElement): WebGLRenderingContext => {
+    // TODO(Angus): fix casting
     return checkExists(
-        canvas.getContext("webgl"),
+        canvas.getContext("webgl2"),
         'webgl is needed to run this',
-    );
+    ) as WebGLRenderingContext;
   }, [canvas]);
 }

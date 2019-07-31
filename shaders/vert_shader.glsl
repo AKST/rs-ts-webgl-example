@@ -1,8 +1,10 @@
-attribute vec2 position;
+#version 300 es
+
+in vec2 position;
+
+out vec4 v_color;
 
 uniform vec2 resolution;
-
-varying vec4 v_color;
 
 void main() {
   // convert the position from pixels to 0.0 to 1.0
