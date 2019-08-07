@@ -46,38 +46,57 @@ pub struct RenderLoop<R, B> {
   context: R,
 }
 
-fn triangle_points(width: i32, height: i32) -> [f32; 9] {
+fn grid_points(width: i32, height: i32, row_len: u32, col_len: u32) -> Vec<f32> {
   let width_f = width as f32;
   let height_f = height as f32;
-  let min_dim = width_f.min(height_f);
 
-  let hr_p = (width_f - min_dim) / 2.0;
-  let vt_p = (height_f - min_dim) / 2.0;
+  let grid_outer = width_f / (row_len as f32);
+  let grid_inner = grid_outer * 0.9;
 
-  let make_point = |x_offset: f32, y_offset: f32| -> [f32; 3] {
-    [
-      hr_p + (min_dim * x_offset),
-      vt_p + (min_dim * y_offset),
-      0.0,
-    ]
+  // the distance from the top to center the grid in the screen
+  let height_offset = (height_f / 2.0) - ((col_len as f32 * grid_outer) / 2.0);
+
+  let write_point = |write_to: &mut [f32], x_offset: f32, y_offset: f32| {
+    write_to[0] = x_offset;
+    write_to[1] = y_offset;
+    write_to[2] = 0.0;
   };
 
-  let mut result: [f32; 9] = [0.0; 9];
-  let left_p = make_point(0.15, 0.15);
-  let right_p = make_point(0.85, 0.15);
-  let top_p = make_point(0.5, 0.85);
+  let write_triangle = |triangle: &mut [f32], x: f32, y: f32, length: f32| {
+    write_point(&mut triangle[0..3], x, y);
+    write_point(&mut triangle[3..6], x + length, y);
+    write_point(&mut triangle[6..9], x, y + length);
+  };
 
-  result[0..3].copy_from_slice(left_p.as_ref());
-  result[3..6].copy_from_slice(right_p.as_ref());
-  result[6..9].copy_from_slice(top_p.as_ref());
+  let make_square_points = |row_start: f32, col_start: f32| -> [f32; 18] {
+    let mut square: [f32; 18] = [0.0; 18];
+    let length = grid_inner;
+    let row_offset = row_start * grid_outer;
+    let col_offset = (col_start * grid_outer) + height_offset;
+    write_triangle(&mut square[0..9], row_offset, col_offset, length);
+    write_triangle(&mut square[9..18], row_offset + length, col_offset + length, -length);
+    square
+  };
 
-  result
+  let mut grid = vec![];
+  for r_index in 0..row_len {
+    for c_index in 0..col_len {
+      let square_points = make_square_points(r_index as f32, c_index as f32);
+      grid.extend_from_slice(&square_points);
+    }
+  }
+
+  grid
+}
+
+fn get_view_data(width: i32, height: i32) -> Vec<f32> {
+  grid_points(width, height, 12, 3)
 }
 
 impl<R, B> RenderLoop<R, B> where R: RenderAPI<Buffer=B>, B: HasBufferKind {
   pub fn create(context: R, width: i32, height: i32) -> Result<Self, RenderLoopError> {
     let buffer = context.create_buffer(BufferKind::ArrayBuffer)?;
-    let data: [f32; 9] = triangle_points(width, height);
+    let data = get_view_data(width, height);
     let view = Float32View::create(&data)?;
     context.bind_buffer(&buffer, &view, DrawKind::StaticDraw);
 
@@ -101,7 +120,7 @@ impl<R, B> RenderLoop<R, B> where R: RenderAPI<Buffer=B>, B: HasBufferKind {
   }
 
   pub fn update_viewport(&mut self, width: i32, height: i32) -> Result<(), RenderLoopError> {
-    let data = triangle_points(width, height);
+    let data = get_view_data(width, height);
 
     self.context.set_viewport(0, 0, width, height);
     self.view.update_data(&data)?;
