@@ -50,8 +50,9 @@ fn grid_points(width: i32, height: i32, row_len: u32, col_len: u32) -> Vec<f32> 
   let width_f = width as f32;
   let height_f = height as f32;
 
-  let grid_outer = width_f / (row_len as f32);
-  let grid_inner = grid_outer * 0.9;
+  let border = (width_f / (row_len as f32)) * 0.075;
+  let grid_outer = (width_f - border) / (row_len as f32);
+  let grid_inner = grid_outer - border;
 
   // the distance from the top to center the grid in the screen
   let height_offset = (height_f / 2.0) - ((col_len as f32 * grid_outer) / 2.0);
@@ -71,8 +72,8 @@ fn grid_points(width: i32, height: i32, row_len: u32, col_len: u32) -> Vec<f32> 
   let make_square_points = |row_start: f32, col_start: f32| -> [f32; 18] {
     let mut square: [f32; 18] = [0.0; 18];
     let length = grid_inner;
-    let row_offset = row_start * grid_outer;
-    let col_offset = (col_start * grid_outer) + height_offset;
+    let row_offset = (row_start * grid_outer) + border;
+    let col_offset = (col_start * grid_outer) + border + height_offset;
     write_triangle(&mut square[0..9], row_offset, col_offset, length);
     write_triangle(&mut square[9..18], row_offset + length, col_offset + length, -length);
     square
